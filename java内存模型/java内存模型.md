@@ -36,7 +36,7 @@
    }
 ```
 
-缺点：1、循环开销大；2、只能保证一个共享变量的原子操作；3、ABA问题？
+**缺点**：1、循环开销大；2、只能保证一个共享变量的原子操作；3、ABA问题？
 
 ## **2.3 ABA问题？原子更新引用？**
 
@@ -167,3 +167,68 @@ public class ABADemo {
 }
 ```
 
+# 3、集合类线程不安全问题
+
+## 3.1 ArrayList是线程安全的，给出线程安全的解决方案？
+
+ArrayList经常出现的异常 java.util.ConcurrentModificationException（并发修改异常）
+
+解决方案：
+
+Vector
+
+Collections.synchronizedList(new ArrayList<>())
+
+CopyOnWriteArrayList
+
+CopyOnWriteArrayList的源码分析：读写分离，写时复制。
+
+```java
+/**
+ * Appends the specified element to the end of this list.
+ *
+ * @param e element to be appended to this list
+ * @return {@code true} (as specified by {@link Collection#add})
+ */
+public boolean add(E e) {
+    final ReentrantLock lock = this.lock;
+    lock.lock();
+    try {
+        Object[] elements = getArray();
+        int len = elements.length;
+        Object[] newElements = Arrays.copyOf(elements, len + 1);
+        newElements[len] = e;
+        setArray(newElements);
+        return true;
+    } finally {
+        lock.unlock();
+    }
+}
+```
+
+## 3.2 Set
+
+HashSet的底层是HashMap。为什么HashSet的add方法不用写Value呢？value是一个常量。
+
+```java
+private static final Object PRESENT = new Object();
+/**
+ * Adds the specified element to this set if it is not already present.
+ * More formally, adds the specified element <tt>e</tt> to this set if
+ * this set contains no element <tt>e2</tt> such that
+ * <tt>(e==null&nbsp;?&nbsp;e2==null&nbsp;:&nbsp;e.equals(e2))</tt>.
+ * If this set already contains the element, the call leaves the set
+ * unchanged and returns <tt>false</tt>.
+ *
+ * @param e element to be added to this set
+ * @return <tt>true</tt> if this set did not already contain the specified
+ * element
+ */
+public boolean add(E e) {
+    return map.put(e, PRESENT)==null;
+}
+```
+
+## 3.3 Map
+
+HashMap底层数据结构：初始化
